@@ -1,7 +1,7 @@
 import { Given, When, Then, After  } from '@cucumber/cucumber';
 import puppeteer from 'puppeteer';
 
-const EMAIL =     "MyPasswordIsTotallyNotMyUsernameBackwards@outlook.hu";
+const EMAIL =     "MyPasswordIsTotallyNotMyUsernameBackwards@outlook.hu"; //this account got locked down by the end, it will not let you log in.
 const PASSWORD =  "sdrawkcaBemanresUyMtoNyllatoTsIdrowssaPyM";
 
 const showBrowser = process.env.SHOW_BROWSER === 'true';
@@ -16,7 +16,7 @@ const Site={
     }
 };
 
-const Email={
+const Email={                           //if test email text is too long it MAY cause problems with ClearLastTestEmail
     address:"gugla9@gmail.com",
     subject:"Teszt tárgy",
     text:"Ez egy teszt üzenet."
@@ -29,15 +29,13 @@ async function TestAccount(){
     const Browser = await puppeteer.launch({headless:false});
     const Active_page = await Browser.newPage();
 
-    Active_page.on('dialog', async dialog => {
+    Active_page.on('dialog', async dialog => { //skips pop up window on leaving.
         if (dialog.type() === 'beforeunload') {
             await dialog.accept(); 
         } else {
             await dialog.dismiss();
         }
     });
-
-
 
     console.log("Browser started")
 
@@ -55,9 +53,8 @@ async function TestAccount(){
     await ClearALLEmails(Active_page);
     console.log("Email cleared")
 
-   
-    await new Promise(resolve => setTimeout(resolve, 60000));
     console.log("closing")
+    page.close();
     Browser.close();
 
 }
@@ -267,7 +264,7 @@ Given('I am logged in as {string} with password {string}',{ timeout: 30_000 }, a
    browser = await puppeteer.launch({ headless: !showBrowser });
    page = await browser.newPage();
 
-   page.on('dialog', async dialog => {
+   page.on('dialog', async dialog => { //skips pop up window on leaving.
         if (dialog.type() === 'beforeunload') {
             await dialog.accept(); 
         } else {
@@ -303,10 +300,8 @@ Then('I clear the email',{ timeout: 30_000 }, async function () {
 });
 
 After(async function () {
-  if (this.page) {
-    await this.page.close();
-  }
-  if (this.browser) {
-    await this.browser.close();
-  }
+ 
+    await page.close();
+    await browser.close();
+  
 });
