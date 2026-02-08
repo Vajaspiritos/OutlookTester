@@ -45,8 +45,9 @@ async function TestAccount(){
     const isThere = await CheckEmail(Active_page);
     console.log(`Email is ${isThere?"":"not "}present in the sent emails folder`)
 
-    if(isThere)console.log(`Email ${await ClearLastTestEmail(Active_page)?"is":"is not"} deleted.`);
+    //if(isThere)console.log(`Email ${await ClearLastTestEmail(Active_page)?"is":"is not"} deleted.`);
 
+    await ClearALLEmails(Active_page);
 
    
     await new Promise(resolve => setTimeout(resolve, 60000));
@@ -56,7 +57,7 @@ async function TestAccount(){
 }
 
 async function ClearLastTestEmail(page){
-await SafeGoto(page,Site.sent)
+    await SafeGoto(page,Site.sent)
 
   try{
         if(!page.url().startsWith(Site.sent)) throw new Error("An error occoured. Not on the right page for checking sent emails.")
@@ -86,7 +87,39 @@ await SafeGoto(page,Site.sent)
             
 
     }catch(err){
+                await page.close();
+ 
+                console.log(err);
+                process.exit(1);
+    }
 
+}
+
+async function ClearALLEmails(page){
+await SafeGoto(page,Site.sent)
+
+  try{
+        if(!page.url().startsWith(Site.sent)) throw new Error("An error occoured. Not on the right page for checking sent emails.")
+            
+            const clear = `[data-unique-id="Ribbon-519"] > [data-unique-id="Ribbon-519"]` 
+            
+
+            await page.waitForSelector(clear,{ visible: true})
+            await page.hover(clear)
+            await sleep(300);
+            await page.click(clear);
+            await sleep(600);
+            page.keyboard.press('Enter')
+           
+            
+            
+        
+          
+            
+
+    }catch(err){
+                await page.close();
+ 
                 console.log(err);
                 process.exit(1);
     }
@@ -113,7 +146,8 @@ async function CheckEmail(page){
             }
 
     }catch(err){
-
+                await page.close();
+ 
                 console.log(err);
                 process.exit(1);
     }
@@ -135,6 +169,7 @@ async function SendEmail(page){
         
             
             await page.waitForSelector(New_email_button,{ visible: true})
+            await sleep(100) //ocassionally needs more time.
             await page.click(New_email_button) //occasionally clicks too early and program crashes. needs to remedy that.
 
             await page.waitForSelector(address,{visible: true})
@@ -158,7 +193,8 @@ async function SendEmail(page){
 
 
     }catch(err){
-
+                await page.close();
+ 
                 console.log(err);
                 process.exit(1);
     }
@@ -215,21 +251,28 @@ function sleep(ms) {
 
 
 async function SafeGoto(page,url,selector = null){
-    try{
-                const response = await page.goto(url);
-                if(!response||!response.ok()){
-                    throw new Error(`Error loading page.\nResponse: ${response.status()}.\npage:${url}`);
-                }else console.log("page successfully loaded.")
 
-                if(selector){
-                    await page.waitForSelector(selector)
+    for(let i=0;i<3;i++){
+                try{
+                    const response = await page.goto(url);
+                    if(!response||!response.ok()){
+                        throw new Error(`Error loading page.\nResponse: ${response.status()}.\npage:${url}`);
+                    }
+
+                    if(selector){
+                        await page.waitForSelector(selector)
+                    }
+
+                    return response;
+                }catch(err){
+                    console.log("SafeGoto failed, retrying...");
+                    
+
                 }
 
-                return response;
-            }catch(err){
-                console.log(err);
-                process.exit(1);
-
-            }
+        }
+        await page.close();
+        process.exit(1);
+        
 }
 
