@@ -1,4 +1,4 @@
-import { Given, When, Then } from '@cucumber/cucumber';
+import { Given, When, Then, After  } from '@cucumber/cucumber';
 import puppeteer from 'puppeteer';
 
 const EMAIL =     "MyPasswordIsTotallyNotMyUsernameBackwards@outlook.hu";
@@ -182,7 +182,7 @@ async function SendEmail(page){
             await page.waitForSelector(submit,{visible: true})
             await page.click(submit)
 
-            await sleep(500);
+            await sleep(800);
             
 
 
@@ -291,7 +291,7 @@ Then('I clear the sent emails', { timeout: 30_000 }, async function () {
 
 });
 
-Then('the email should appear in my Sent folder',{ timeout: 30_000 }, async function () {
+Then('the email should appear in my Sent folder',{ timeout: 60_000 }, async function () { //extra time since sometimes outlook needs more time to register the sent email.
     
     const isThere = await CheckEmail(page);
     if(!isThere) throw new Error("Email is not in the sent folder")
@@ -302,3 +302,11 @@ Then('I clear the email',{ timeout: 30_000 }, async function () {
     await ClearLastTestEmail(page)
 });
 
+After(async function () {
+  if (this.page) {
+    await this.page.close();
+  }
+  if (this.browser) {
+    await this.browser.close();
+  }
+});
