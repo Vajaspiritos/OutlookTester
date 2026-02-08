@@ -5,7 +5,10 @@ const PW = process.env.OUTLOOK_PASSWORD?? "sdrawkcaBemanresUyMtoNyllatoTsIdrowss
 
 const Site={
     base:"https://outlook.live.com/mail/0/",
-    login:"https://go.microsoft.com/fwlink/p/?LinkID=2125442"
+    login:"https://go.microsoft.com/fwlink/p/?LinkID=2125442",
+    get sent() {
+        return this.base + 'sentitems';
+    }
 };
 
 const Email={
@@ -21,18 +24,99 @@ async function TestAccount(){
     const Browser = await puppeteer.launch({headless:false});
     const Active_page = await Browser.newPage();
 
+    Active_page.on('dialog', async dialog => {
+        if (dialog.type() === 'beforeunload') {
+            await dialog.accept(); 
+        } else {
+            await dialog.dismiss();
+        }
+    });
+
+
+
     console.log("Browser started")
 
     await LogIn(Active_page)
     console.log("logged in")
 
-    SendEmail(Active_page);
-    console.log("Email elküldve")
+    await SendEmail(Active_page);
+    console.log("Email sent")
+
+    const isThere = await CheckEmail(Active_page);
+    console.log(`Email is ${isThere?"":"not "}present in the sent emails folder`)
+
+    if(isThere)console.log(`Email ${await ClearLastTestEmail(Active_page)?"is":"is not"} deleted.`);
+
 
    
     await new Promise(resolve => setTimeout(resolve, 60000));
     console.log("closing")
     Browser.close();
+
+}
+
+async function ClearLastTestEmail(page){
+await SafeGoto(page,Site.sent)
+
+  try{
+        if(!page.url().startsWith(Site.sent)) throw new Error("An error occoured. Not on the right page for checking sent emails.")
+            
+            const selector = `[aria-label*="${Email.address}"][aria-label*="${Email.subject}"][aria-label*="${Email.text}"] .wBMYh`; 
+              
+            
+
+            try {
+                await page.waitForSelector(selector, {
+                visible: true,
+                timeout: 10*1000
+                });
+                    await page.hover(selector)
+
+                    await sleep(200)
+
+                      await page.click(selector)
+
+                return true;
+                
+            } catch(err) {
+                console.log(err)
+                return false;
+            }
+          
+            
+
+    }catch(err){
+
+                console.log(err);
+                process.exit(1);
+    }
+
+}
+
+async function CheckEmail(page){
+ await SafeGoto(page,Site.sent)
+
+
+  try{
+        if(!page.url().startsWith(Site.sent)) throw new Error("An error occoured. Not on the right page for checking sent emails.")
+            
+            const selector = `[aria-label*="${Email.address}"][aria-label*="${Email.subject}"][aria-label*="${Email.text}"]`; 
+            
+            try {
+                await page.waitForSelector(selector, {
+                visible: true,
+                timeout: 10*1000
+                });
+                return true;
+            } catch {
+                return false;
+            }
+
+    }catch(err){
+
+                console.log(err);
+                process.exit(1);
+    }
 
 }
 
@@ -68,6 +152,7 @@ async function SendEmail(page){
             await page.waitForSelector(submit,{visible: true})
             await page.click(submit)
 
+            await sleep(500);
             
 
 
@@ -120,6 +205,12 @@ async function LogIn(page){
    
 
 
+}
+
+
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
