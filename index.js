@@ -1,7 +1,12 @@
+import { Given, When, Then } from '@cucumber/cucumber';
 import puppeteer from 'puppeteer';
 
-const EM = process.env.OUTLOOK_EMAIL?? "MyPasswordIsTotallyNotMyUsernameBackwards@outlook.hu";
-const PW = process.env.OUTLOOK_PASSWORD?? "sdrawkcaBemanresUyMtoNyllatoTsIdrowssaPyM";
+const EMAIL =     "MyPasswordIsTotallyNotMyUsernameBackwards@outlook.hu";
+const PASSWORD =  "sdrawkcaBemanresUyMtoNyllatoTsIdrowssaPyM";
+
+const showBrowser = process.env.SHOW_BROWSER === 'true';
+
+ let browser,page;
 
 const Site={
     base:"https://outlook.live.com/mail/0/",
@@ -18,7 +23,7 @@ const Email={
 }
 
 
-await TestAccount();
+//await TestAccount();
 
 async function TestAccount(){
     const Browser = await puppeteer.launch({headless:false});
@@ -36,7 +41,7 @@ async function TestAccount(){
 
     console.log("Browser started")
 
-    await LogIn(Active_page)
+    await LogIn(Active_page,EMAIL,PASSWORD)
     console.log("logged in")
 
     await SendEmail(Active_page);
@@ -45,9 +50,10 @@ async function TestAccount(){
     const isThere = await CheckEmail(Active_page);
     console.log(`Email is ${isThere?"":"not "}present in the sent emails folder`)
 
+    // alternative to only delete the most recently made test email. and leave other emails.
     //if(isThere)console.log(`Email ${await ClearLastTestEmail(Active_page)?"is":"is not"} deleted.`);
-
     await ClearALLEmails(Active_page);
+    console.log("Email cleared")
 
    
     await new Promise(resolve => setTimeout(resolve, 60000));
@@ -55,7 +61,6 @@ async function TestAccount(){
     Browser.close();
 
 }
-
 async function ClearLastTestEmail(page){
     await SafeGoto(page,Site.sent)
 
@@ -94,7 +99,6 @@ async function ClearLastTestEmail(page){
     }
 
 }
-
 async function ClearALLEmails(page){
 await SafeGoto(page,Site.sent)
 
@@ -103,19 +107,12 @@ await SafeGoto(page,Site.sent)
             
             const clear = `[data-unique-id="Ribbon-519"] > [data-unique-id="Ribbon-519"]` 
             
-
             await page.waitForSelector(clear,{ visible: true})
             await page.hover(clear)
             await sleep(300);
             await page.click(clear);
             await sleep(600);
-            page.keyboard.press('Enter')
-           
-            
-            
-        
-          
-            
+            page.keyboard.press('Enter')  
 
     }catch(err){
                 await page.close();
@@ -125,7 +122,6 @@ await SafeGoto(page,Site.sent)
     }
 
 }
-
 async function CheckEmail(page){
  await SafeGoto(page,Site.sent)
 
@@ -153,7 +149,6 @@ async function CheckEmail(page){
     }
 
 }
-
 async function SendEmail(page){
     await SafeGoto(page,Site.base)
     
@@ -200,9 +195,7 @@ async function SendEmail(page){
     }
 
 }
-
-
-async function LogIn(page){
+async function LogIn(page,EM,PW){
      console.log("Commencing login...")
 
     await SafeGoto(page, Site.login,'#i0116')
@@ -242,14 +235,9 @@ async function LogIn(page){
 
 
 }
-
-
-
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-
-
 async function SafeGoto(page,url,selector = null){
 
     for(let i=0;i<3;i++){
@@ -275,4 +263,42 @@ async function SafeGoto(page,url,selector = null){
         process.exit(1);
         
 }
+Given('I am logged in as {string} with password {string}',{ timeout: 30_000 }, async function (email, password) {
+   browser = await puppeteer.launch({ headless: !showBrowser });
+   page = await browser.newPage();
+
+   page.on('dialog', async dialog => {
+        if (dialog.type() === 'beforeunload') {
+            await dialog.accept(); 
+        } else {
+            await dialog.dismiss();
+        }
+    });
+
+  await LogIn(page, email, password);
+ 
+});
+
+When('I send an email to {string}',{ timeout: 30_000 }, async function (address) {
+    Email.address = address;
+await SendEmail(page)
+
+});
+
+Then('I clear the sent emails', { timeout: 30_000 }, async function () {
+  
+    await ClearALLEmails(page)
+
+});
+
+Then('the email should appear in my Sent folder',{ timeout: 30_000 }, async function () {
+    
+    const isThere = await CheckEmail(page);
+    if(!isThere) throw new Error("Email is not in the sent folder")
+});
+
+Then('I clear the email',{ timeout: 30_000 }, async function () {
+    
+    await ClearLastTestEmail(page)
+});
 
