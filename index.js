@@ -109,10 +109,11 @@ await SafeGoto(page,Site.sent)
             
             await page.waitForSelector(clear,{ visible: true})
             await page.hover(clear)
-            await sleep(300);
+            await sleep(600);
             await page.click(clear);
             await sleep(600);
             page.keyboard.press('Enter')  
+             await sleep(600);
 
    
    
@@ -130,7 +131,7 @@ async function CheckEmail(page){
             try {
                 await page.waitForSelector(selector, {
                 visible: true,
-                timeout: 10*1000
+                timeout: 3*1000
                 });
                 return true;
             } catch {
@@ -286,6 +287,9 @@ Then('I clear the sent emails', { timeout: 30_000 }, async function () {
     for(let i=0;i<3;i++){
         try{
         await ClearALLEmails(page)
+
+            if(await CheckEmail(page)) throw new Error("Emails were not deleted")
+
         break;
         }catch(err){
             console.log("retrying email clearing")
