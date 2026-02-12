@@ -50,7 +50,10 @@ async function TestAccount(){
 
     // alternative to only delete the most recently made test email. and leave other emails.
     //if(isThere)console.log(`Email ${await ClearLastTestEmail(Active_page)?"is":"is not"} deleted.`);
+    try{
     await ClearALLEmails(Active_page);
+    }catch(err){console.log(err)}
+
     console.log("Email cleared")
 
     console.log("closing")
@@ -99,7 +102,7 @@ async function ClearLastTestEmail(page){
 async function ClearALLEmails(page){
 await SafeGoto(page,Site.sent)
 
-  try{
+ 
         if(!page.url().startsWith(Site.sent)) throw new Error("An error occoured. Not on the right page for checking sent emails.")
             
             const clear = `[data-unique-id="Ribbon-519"] > [data-unique-id="Ribbon-519"]` 
@@ -111,12 +114,8 @@ await SafeGoto(page,Site.sent)
             await sleep(600);
             page.keyboard.press('Enter')  
 
-    }catch(err){
-                await page.close();
- 
-                console.log(err);
-                process.exit(1);
-    }
+   
+   
 
 }
 async function CheckEmail(page){
@@ -140,7 +139,7 @@ async function CheckEmail(page){
 
     }catch(err){
                 await page.close();
- 
+                await browser.close();
                 console.log(err);
                 process.exit(1);
     }
@@ -186,7 +185,7 @@ async function SendEmail(page){
 
     }catch(err){
                 await page.close();
- 
+                await browser.close();
                 console.log(err);
                 process.exit(1);
     }
@@ -257,6 +256,7 @@ async function SafeGoto(page,url,selector = null){
 
         }
         await page.close();
+        await browser.close();
         process.exit(1);
         
 }
@@ -283,9 +283,15 @@ await SendEmail(page)
 });
 
 Then('I clear the sent emails', { timeout: 30_000 }, async function () {
-  
-    await ClearALLEmails(page)
-
+    for(let i=0;i<3;i++){
+        try{
+        await ClearALLEmails(page)
+        break;
+        }catch(err){
+            console.log("retrying email clearing")
+            if(i==2) console.log(err);
+        }
+    }
 });
 
 Then('the email should appear in my Sent folder',{ timeout: 60_000 }, async function () { //extra time since sometimes outlook needs more time to register the sent email.
@@ -300,8 +306,6 @@ Then('I clear the email',{ timeout: 30_000 }, async function () {
 });
 
 After(async function () {
- 
-    await page.close();
-    await browser.close();
-  
+     if(!page.isClosed()) await page.close();
+     if(browser) await browser.close();
 });
