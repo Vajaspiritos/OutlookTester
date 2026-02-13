@@ -311,7 +311,7 @@ Then('I clear the email',{ timeout: 30_000 }, async function () {
 
 /* after sometimes crashes?
 After(async function () {
-     if(!page.isClosed()) await page.close();
+     //if(!page.isClosed()) await page.close();
      if(browser) await browser.close();
 });
 */
